@@ -1,5 +1,7 @@
 package hu.novaservices;
 
+import lombok.Getter;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -8,6 +10,7 @@ class LanguageSettings {
     private final Pattern[][] tokenexps;
     private String[] tokenfields;
     private final String[][][] dictionaries;
+    @Getter
     private final String name;
     private final int[] charweights;
 
@@ -158,10 +161,6 @@ class LanguageSettings {
             return 0;
         else
             return charweights[tokenNum];
-    }
-
-    public String getName() {
-        return name;
     }
 
     public int whichField(String fieldName) {

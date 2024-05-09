@@ -1,20 +1,18 @@
 package hu.novaservices;
 
+import lombok.RequiredArgsConstructor;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@RequiredArgsConstructor
 public class AddressParser {
     private static final String DEFAULT_LANGUAGE = "hu";
     private static final Pattern whiteSpacePattern = Pattern.compile("\\S+\\s+(\\S+)");
     private static final Pattern reverseWhiteSpacePattern = Pattern.compile("(\\S+)\\s+\\S+");
     private final LanguageSettings[] langSettings;
-
-    public AddressParser(LanguageSettings[] languageSettings) {
-        this.langSettings = languageSettings;
-    }
-
 
     public String getFieldValue(String address, String langcode, String field) {
 
@@ -139,7 +137,7 @@ public class AddressParser {
                     for (String[] strings : subret) {
                         String[] possres = new String[partialResults.length];
                         System.arraycopy(strings, 0, possres, 0, lastpr);
-                        possres[lastpr] = input.substring(res.getContentleft(), res.getContentright());
+                        possres[lastpr] = input.substring(res.getContentLeft(), res.getContentRight());
 
                         ret.add(possres);
                     }
