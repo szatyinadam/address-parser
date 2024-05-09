@@ -5,36 +5,28 @@ import lombok.Getter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 class LanguageSettings {
     private final Pattern[][] tokenexps;
-    private String[] tokenfields;
+    private final List<String> tokenfields;
     private final String[][][] dictionaries;
     @Getter
-    private final String name;
+    private final String languageCode;
     private final int[] charweights;
 
-    public LanguageSettings(String name, String[] tokenfields, String[][][] dictionaries, String[][] tokenexps, int[] charweights) {
-        this.tokenfields = new String[0];
-        if (tokenfields != null) {
-            List<String> tokenfieldsl = new ArrayList<String>();
-            for (String tokenfield : tokenfields) {
-                String token = tokenfield;
-                if (token != null) {
-                    token = token.trim();
-                    if (!token.isEmpty())
-                        tokenfieldsl.add(token);
-                }
-            }
-            this.tokenfields = tokenfieldsl.toArray(this.tokenfields);
-        }
+    public LanguageSettings(String languageCode, List<String> tokenFields, String[][][] dictionaries, String[][] tokenexps, int[] charweights) {
+        this.tokenfields = tokenFields.stream()
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toList());
 
         if (tokenexps == null)
-            this.tokenexps = new Pattern[this.tokenfields.length][0];
+            this.tokenexps = new Pattern[this.tokenfields.size()][0];
         else {
-            this.tokenexps = new Pattern[this.tokenfields.length][];
+            this.tokenexps = new Pattern[this.tokenfields.size()][];
 
-            for (int i = 0; i < this.tokenfields.length; i++) {
+            for (int i = 0; i < this.tokenfields.size(); i++) {
                 List<Pattern> exps = new ArrayList<>();
                 if (tokenexps.length > i && tokenexps[i] != null) {
                     for (int j = 0; j < tokenexps[i].length; j++) {
@@ -44,7 +36,7 @@ class LanguageSettings {
                             if (!exp.isEmpty()) {
                                 if (i == 0)
                                     exp = "\\A(" + exp + "(?:\\Z|\\s+))";
-                                else if (i == this.tokenfields.length - 1)
+                                else if (i == this.tokenfields.size() - 1)
                                     exp = "(?:\\A|\\s+)(" + exp + "\\Z)";
                                 else
                                     exp = "(?:\\A|\\s+)(" + exp + "(?:\\Z|\\s+))";
@@ -60,11 +52,11 @@ class LanguageSettings {
         }
 
         if (dictionaries == null)
-            this.dictionaries = new String[this.tokenfields.length][0][2];
+            this.dictionaries = new String[this.tokenfields.size()][0][2];
         else {
-            this.dictionaries = new String[this.tokenfields.length][][];
+            this.dictionaries = new String[this.tokenfields.size()][][];
 
-            for (int i = 0; i < this.tokenfields.length; i++) {
+            for (int i = 0; i < this.tokenfields.size(); i++) {
                 List<String[]> dictelems = new ArrayList<>();
                 if (dictionaries.length > i && dictionaries[i] != null) {
                     for (int j = 0; j < dictionaries[i].length; j++) {
@@ -96,22 +88,22 @@ class LanguageSettings {
             }
         }
 
-        this.charweights = new int[this.tokenfields.length];
+        this.charweights = new int[this.tokenfields.size()];
         if (charweights != null) {
-            for (int i = 0; i < this.tokenfields.length && i < charweights.length; i++) {
+            for (int i = 0; i < this.tokenfields.size() && i < charweights.length; i++) {
                 this.charweights[i] = charweights[i];
             }
         }
 
-        if (name == null)
-            this.name = "";
+        if (languageCode == null)
+            this.languageCode = "";
         else
-            this.name = name.trim();
+            this.languageCode = languageCode.trim();
     }
 
 
     public int getTokenCount() {
-        return tokenfields.length;
+        return tokenfields.size();
     }
 
     /*
@@ -139,7 +131,7 @@ class LanguageSettings {
     public String getFieldName(int tokenNum) {
         if (tokenNum >= getTokenCount())
             return null;
-        return tokenfields[tokenNum];
+        return tokenfields.get(tokenNum);
     }
 
     public int getTokenExpCount(int tokenNum) {
@@ -164,8 +156,8 @@ class LanguageSettings {
     }
 
     public int whichField(String fieldName) {
-        for (int i = 0; i < tokenfields.length; i++)
-            if (tokenfields[i].equalsIgnoreCase(fieldName))
+        for (int i = 0; i < tokenfields.size(); i++)
+            if (tokenfields.get(i).equalsIgnoreCase(fieldName))
                 return i;
         return -1;
     }

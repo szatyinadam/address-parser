@@ -1,29 +1,42 @@
 package hu.novaservices;
 
-import lombok.RequiredArgsConstructor;
-
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-@RequiredArgsConstructor
 public class AddressParser {
     private static final String DEFAULT_LANGUAGE = "hu";
     private static final Pattern whiteSpacePattern = Pattern.compile("\\S+\\s+(\\S+)");
     private static final Pattern reverseWhiteSpacePattern = Pattern.compile("(\\S+)\\s+\\S+");
     private final LanguageSettings[] langSettings;
+    private final String address;
+    private final String languageCode;
 
-    public String getFieldValue(String address, String langcode, String field) {
+    public AddressParser(LanguageSettings[] languageSettings, String address) {
+        this(languageSettings, address, DEFAULT_LANGUAGE);
+    }
 
-        if (langSettings == null)
-            return "";
-        if (langcode == null || langcode.trim().isEmpty())
-            langcode = DEFAULT_LANGUAGE;
+    public AddressParser(LanguageSettings[] languageSettings, String address, String languageCode) {
+        if (Objects.requireNonNull(languageSettings).length == 0
+                || Objects.requireNonNull(address).trim().isEmpty()
+                || Objects.requireNonNull(languageCode).trim().isEmpty()) {
+            throw new IllegalArgumentException("Language settings, code and address can not be empty");
+        }
 
+        this.langSettings = languageSettings;
+        this.address = address.replaceAll("\\.", " ")
+                .replaceAll(",", " ")
+                .replaceAll(";", " ")
+                .trim();
+        this.languageCode = languageCode;
+    }
+
+    public String getFieldValue(String field) {
         LanguageSettings lang = null;
         for (LanguageSettings langSetting : langSettings)
-            if (langSetting.getName().equalsIgnoreCase(langcode)) {
+            if (langSetting.getLanguageCode().equalsIgnoreCase(this.languageCode)) {
                 lang = langSetting;
                 break;
             }
@@ -33,13 +46,6 @@ public class AddressParser {
         if (lang.whichField(field) == -1)
             return "";
 
-        if (address == null || address.trim().isEmpty())
-            address = "";
-
-        address = address.replaceAll("\\.", " ");
-        address = address.replaceAll(",", " ");
-        address = address.replaceAll(";", " ");
-        address = address.trim();
         Matcher nsm = whiteSpacePattern.matcher(address);
         Matcher rsm = reverseWhiteSpacePattern.matcher(new StringBuffer(address).reverse().toString());
 
