@@ -16,89 +16,83 @@ class LanguageSettings {
     private final int[] charweights;
 
     public LanguageSettings(String languageCode, List<String> tokenFields, String[][][] dictionaries, String[][] tokenexps, int[] charweights) {
-        this.tokenfields = tokenFields.stream()
+        this.tokenfields = initializeTokenFields(tokenFields);
+        this.tokenexps = loadTokenExpressions(tokenexps);
+        this.dictionaries = loadDictionaries(dictionaries);
+        this.charweights = loadCharacterWeights(charweights);
+        this.languageCode = (languageCode == null) ? "" : languageCode.trim();
+    }
+
+    private int[] loadCharacterWeights(int[] charweights) {
+        int[] characterWeights = new int[this.tokenfields.size()];
+        if (charweights != null) {
+            for (int i = 0; i < this.tokenfields.size() && i < charweights.length; i++) {
+                characterWeights[i] = charweights[i];
+            }
+        }
+        return characterWeights;
+    }
+
+    private String[][][] loadDictionaries(String[][][] dictionaries) {
+        String[][][] dictionariesResult = new String[this.tokenfields.size()][][];
+
+        for (int i = 0; i < this.tokenfields.size(); i++) {
+            List<String[]> dictelems = new ArrayList<>();
+            if (dictionaries != null && dictionaries.length > i && dictionaries[i] != null) {
+                for (String[] dictelem : dictionaries[i]) {
+                    if (isValidDictElement(dictelem)) {
+                        String dictkey = dictelem[0].trim();
+                        String dictvalue = getDictvalue(dictelem);
+
+                        dictelems.add(new String[]{dictkey, dictvalue});
+                    }
+                }
+            }
+            dictionariesResult[i] = dictelems.toArray(new String[0][]);
+        }
+        return dictionaries;
+    }
+
+    private String getDictvalue(String[] dictelem) {
+        return (dictelem.length > 1 && dictelem[1] != null) ? dictelem[1].trim() : "";
+    }
+
+    private boolean isValidDictElement(String[] dictelem) {
+        return (dictelem != null && dictelem.length > 0 && dictelem[0] != null && !dictelem[0].trim().isEmpty());
+    }
+
+    private List<String> initializeTokenFields(List<String> tokenFields) {
+        return tokenFields.stream()
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .collect(Collectors.toList());
+    }
 
-        if (tokenexps == null)
-            this.tokenexps = new Pattern[this.tokenfields.size()][0];
-        else {
-            this.tokenexps = new Pattern[this.tokenfields.size()][];
+    private Pattern[][] loadTokenExpressions(String[][] tokenexps) {
+        Pattern[][] tokenExpressions = new Pattern[this.tokenfields.size()][];
 
-            for (int i = 0; i < this.tokenfields.size(); i++) {
-                List<Pattern> exps = new ArrayList<>();
-                if (tokenexps.length > i && tokenexps[i] != null) {
-                    for (int j = 0; j < tokenexps[i].length; j++) {
-                        String exp = tokenexps[i][j];
-                        if (exp != null) {
-                            exp = exp.trim();
-                            if (!exp.isEmpty()) {
-                                if (i == 0)
-                                    exp = "\\A(" + exp + "(?:\\Z|\\s+))";
-                                else if (i == this.tokenfields.size() - 1)
-                                    exp = "(?:\\A|\\s+)(" + exp + "\\Z)";
-                                else
-                                    exp = "(?:\\A|\\s+)(" + exp + "(?:\\Z|\\s+))";
-
-                                exps.add(Pattern.compile(exp, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE));
-                            }
-                        }
+        for (int i = 0; i < this.tokenfields.size(); i++) {
+            List<Pattern> exps = new ArrayList<>();
+            if (tokenexps != null && tokenexps.length > i && tokenexps[i] != null) {
+                for (String exp : tokenexps[i]) {
+                    if (exp != null && !exp.trim().isEmpty()) {
+                        String pattern = buildPatternForExpression(exp, this.tokenfields.size() - 1, i);
+                        exps.add(Pattern.compile(pattern, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE));
                     }
                 }
-                this.tokenexps[i] = new Pattern[0];
-                this.tokenexps[i] = exps.toArray(this.tokenexps[i]);
             }
+            tokenExpressions[i] = exps.toArray(new Pattern[0]);
         }
+        return tokenExpressions;
+    }
 
-        if (dictionaries == null)
-            this.dictionaries = new String[this.tokenfields.size()][0][2];
-        else {
-            this.dictionaries = new String[this.tokenfields.size()][][];
-
-            for (int i = 0; i < this.tokenfields.size(); i++) {
-                List<String[]> dictelems = new ArrayList<>();
-                if (dictionaries.length > i && dictionaries[i] != null) {
-                    for (int j = 0; j < dictionaries[i].length; j++) {
-                        String[] dictelem = dictionaries[i][j];
-                        if (dictelem != null && dictelem.length > 0) {
-                            String dictkey = dictelem[0];
-                            if (dictkey != null) {
-                                dictkey = dictkey.trim();
-                                if (!dictkey.isEmpty()) {
-                                    String dictvalue = null;
-                                    if (dictelem.length > 1) {
-                                        dictvalue = dictelem[1];
-                                    }
-
-                                    if (dictvalue != null) {
-                                        dictvalue = dictvalue.trim();
-                                    } else
-                                        dictvalue = "";
-
-                                    dictelem = new String[]{dictkey, dictvalue};
-                                    dictelems.add(dictelem);
-                                }
-                            }
-                        }
-                    }
-                }
-                this.dictionaries[i] = new String[0][];
-                this.dictionaries[i] = dictelems.toArray(this.dictionaries[i]);
-            }
-        }
-
-        this.charweights = new int[this.tokenfields.size()];
-        if (charweights != null) {
-            for (int i = 0; i < this.tokenfields.size() && i < charweights.length; i++) {
-                this.charweights[i] = charweights[i];
-            }
-        }
-
-        if (languageCode == null)
-            this.languageCode = "";
+    private String buildPatternForExpression(String exp, int indexOfTheDoor, int actualFieldIndex) {
+        if (actualFieldIndex == 0)
+            return "\\A(" + exp + "(?:\\Z|\\s+))";
+        else if (actualFieldIndex == indexOfTheDoor)
+            return "(?:\\A|\\s+)(" + exp + "\\Z)";
         else
-            this.languageCode = languageCode.trim();
+            return "(?:\\A|\\s+)(" + exp + "(?:\\Z|\\s+))";
     }
 
 
