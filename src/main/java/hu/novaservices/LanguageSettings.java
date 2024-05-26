@@ -2,10 +2,12 @@ package hu.novaservices;
 
 import lombok.Getter;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 class LanguageSettings {
     private final Pattern[][] tokenexps;
@@ -24,34 +26,26 @@ class LanguageSettings {
     }
 
     private int[] loadCharacterWeights(int[] charweights) {
-        int[] characterWeights = new int[this.tokenfields.size()];
-        if (charweights != null) {
-            for (int i = 0; i < this.tokenfields.size() && i < charweights.length; i++) {
-                characterWeights[i] = charweights[i];
-            }
-        }
-        return characterWeights;
+        return Arrays.stream(charweights, 0, (Math.max(this.tokenfields.size(), charweights.length)))
+                .toArray();
     }
 
     private String[][][] loadDictionaries(String[][][] dictionaries) {
-        String[][][] dictionariesResult = new String[this.tokenfields.size()][][];
-
-        for (int i = 0; i < this.tokenfields.size(); i++) {
-            List<String[]> dictelems = new ArrayList<>();
-            if (dictionaries != null && dictionaries.length > i && dictionaries[i] != null) {
-                for (String[] dictelem : dictionaries[i]) {
-                    if (isValidDictElement(dictelem)) {
-                        String dictkey = dictelem[0].trim();
-                        String dictvalue = getDictvalue(dictelem);
-
-                        dictelems.add(new String[]{dictkey, dictvalue});
-                    }
-                }
-            }
-            dictionariesResult[i] = dictelems.toArray(new String[0][]);
-        }
-        return dictionaries;
+        return IntStream.range(0, this.tokenfields.size())
+                .mapToObj(i -> {
+                            if (dictionaries != null && dictionaries.length > i && dictionaries[i] != null) {
+                                return Arrays.stream(dictionaries[i])
+                                        .filter(this::isValidDictElement)
+                                        .map(dictelem -> new String[]{dictelem[0].trim(), getDictvalue(dictelem)})
+                                        .toArray(String[][]::new);
+                            } else {
+                                return new String[0][];
+                            }
+                        }
+                )
+                .toArray(String[][][]::new);
     }
+
 
     private String getDictvalue(String[] dictelem) {
         return (dictelem.length > 1 && dictelem[1] != null) ? dictelem[1].trim() : "";
@@ -69,21 +63,21 @@ class LanguageSettings {
     }
 
     private Pattern[][] loadTokenExpressions(String[][] tokenexps) {
-        Pattern[][] tokenExpressions = new Pattern[this.tokenfields.size()][];
-
-        for (int i = 0; i < this.tokenfields.size(); i++) {
-            List<Pattern> exps = new ArrayList<>();
-            if (tokenexps != null && tokenexps.length > i && tokenexps[i] != null) {
-                for (String exp : tokenexps[i]) {
-                    if (exp != null && !exp.trim().isEmpty()) {
-                        String pattern = buildPatternForExpression(exp, this.tokenfields.size() - 1, i);
-                        exps.add(Pattern.compile(pattern, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE));
-                    }
-                }
-            }
-            tokenExpressions[i] = exps.toArray(new Pattern[0]);
-        }
-        return tokenExpressions;
+        return IntStream.range(0, this.tokenfields.size())
+                .mapToObj(i -> {
+                            if (tokenexps != null && tokenexps.length > i && tokenexps[i] != null) {
+                                return Arrays.stream(tokenexps[i])
+                                        .filter(Objects::nonNull)
+                                        .filter(exp -> !exp.trim().isEmpty())
+                                        .map(exp -> buildPatternForExpression(exp, this.tokenfields.size() - 1, i))
+                                        .map(pattern -> Pattern.compile(pattern, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE))
+                                        .toArray(Pattern[]::new);
+                            } else {
+                                return new Pattern[0];
+                            }
+                        }
+                )
+                .toArray(Pattern[][]::new);
     }
 
     private String buildPatternForExpression(String exp, int indexOfTheDoor, int actualFieldIndex) {
@@ -129,24 +123,15 @@ class LanguageSettings {
     }
 
     public int getTokenExpCount(int tokenNum) {
-        if (tokenNum >= getTokenCount())
-            return 0;
-        else
-            return tokenexps[tokenNum].length;
+        return tokenNum >= getTokenCount() ? 0 : tokenexps[tokenNum].length;
     }
 
     public Pattern getTokenExp(int tokenNum, int tokenExpNum) {
-        if (tokenExpNum >= getTokenExpCount(tokenNum))
-            return null;
-        else
-            return tokenexps[tokenNum][tokenExpNum];
+        return tokenExpNum >= getTokenExpCount(tokenNum) ? null : tokenexps[tokenNum][tokenExpNum];
     }
 
     public int getCharWeight(int tokenNum) {
-        if (tokenNum >= getTokenCount())
-            return 0;
-        else
-            return charweights[tokenNum];
+        return tokenNum >= getTokenCount() ? 0 : charweights[tokenNum];
     }
 
     public int whichField(String fieldName) {
